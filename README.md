@@ -1,5 +1,9 @@
 # AsyncSDk
 
+## Introduction
+
+### Non-intrusive asynchronous task encapsulation, independent scheduled tasks, independent message queues. Supports manual compensation to achieve eventual consistency
+
 
 ## Configuration
 
@@ -8,7 +12,7 @@
 
 ### Data Source: Druid
 - `spring.datasource.driver-class-name=com.mysql.jdbc.Driver`
-- `spring.datasource.url=jdbc:mysql://127.0.0.1:3306/fc_async?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowMultiQueries=true&rewriteBatchedStatements=true`
+- `spring.datasource.url=jdbc:mysql://127.0.0.1:3306/asyncsdk?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowMultiQueries=true&rewriteBatchedStatements=true`
 - `spring.datasource.username=user`
 - `spring.datasource.password=xxxx`
 - `spring.datasource.filters=config`
