@@ -4,6 +4,9 @@
 
 ### Non-intrusive asynchronous task encapsulation, independent scheduled tasks, independent message queues. Supports manual compensation to achieve eventual consistency
 
+<img width="1036" height="924" alt="3a9ee723-e33f-4e48-8b8b-b5140978d13c" src="https://github.com/user-attachments/assets/eb3616d0-91ea-4a30-8cbe-97ede26a35b0" />
+
+
 
 ## Configuration
 
