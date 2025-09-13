@@ -1,57 +1,131 @@
 # AsyncSDK
 
-## Introduction
+This module provides an asynchronous task execution framework based on **Spring Boot**, **kafka**, **xxl-job**, and **MySQL**, with flexible configuration and logging.
 
-### Non-intrusive asynchronous task encapsulation, independent scheduled tasks, independent message queues. Supports manual compensation to achieve eventual consistency
-
-<img width="1036" height="924" alt="3a9ee723-e33f-4e48-8b8b-b5140978d13c" src="https://github.com/user-attachments/assets/eb3616d0-91ea-4a30-8cbe-97ede26a35b0" />
+<img width="524" height="1036" alt="ChatGPT Image 2025年9月14日 01_51_39" src="https://github.com/user-attachments/assets/2cf07dca-bf2c-49f6-b396-845ee8e98c76" />
 
 
+## 1. Database Schema
 
-## Configuration
+### Table: `async_req`
 
-### Switch: Default off
-`async.enabled=true`
+```sql
+CREATE TABLE `async_req` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'Primary key ID',
+  `application_name` varchar(100) NOT NULL DEFAULT '' COMMENT 'Application name',
+  `sign` varchar(50) NOT NULL DEFAULT '' COMMENT 'Method signature',
+  `class_name` varchar(200) NOT NULL DEFAULT '' COMMENT 'Fully qualified class name',
+  `method_name` varchar(100) NOT NULL DEFAULT '' COMMENT 'Method name',
+  `async_type` varchar(50) NOT NULL DEFAULT '' COMMENT 'Asynchronous strategy type',
+  `exec_status` tinyint NOT NULL DEFAULT '0' COMMENT 'Execution status: 0 = Initialized, 1 = Execution failed, 2 = Execution succeeded',
+  `exec_count` int NOT NULL DEFAULT '0' COMMENT 'Execution count',
+  `param_json` longtext COMMENT 'Request parameters (JSON)',
+  `remark` varchar(200) NOT NULL DEFAULT '' COMMENT 'Business description',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation time',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Update time',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_applocation_name` (`application_name`) USING BTREE,
+  KEY `idx_exec_status` (`exec_status`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Asynchronous processing request';
+```
 
-### Data Source: Druid
-- `spring.datasource.driver-class-name=com.mysql.jdbc.Driver`
-- `spring.datasource.url=jdbc:mysql://127.0.0.1:3306/asyncsdk?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowMultiQueries=true&rewriteBatchedStatements=true`
-- `spring.datasource.username=user`
-- `spring.datasource.password=xxxx`
-- `spring.datasource.filters=config`
-- `spring.datasource.connectionProperties=config.decrypt=true;config.decrypt.key=yyy`
+### Table: `async_log`
 
-### Static Addresses
-- `spring.resources.add-mappings=true`
-- `spring.resources.static-locations=classpath:/static/`
+```sql
+CREATE TABLE `async_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'Primary key ID',
+  `async_id` bigint NOT NULL DEFAULT '0' COMMENT 'Asynchronous request ID',
+  `error_data` longtext COMMENT 'Execution error information',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'Creation time',
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_async_id` (`async_id`) USING BTREE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='Asynchronous processing log';
+```
 
-### Defaults
-#### Core Thread Count
-`async.executor.thread.corePoolSize=10`
-#### Maximum Thread Count
-`async.executor.thread.maxPoolSize=50`
-#### Queue Capacity
-`async.executor.thread.queueCapacity=10000`
-#### Keep Alive Time
-`async.executor.thread.keepAliveSeconds=600`
+---
 
-#### Record Deletion Post-Execution: Default is to delete
-`async.exec.deleted=true`
+## 2. Configuration
 
-#### Custom Queue Name Prefix: Default is application name
-`async.topic=application name`
+Below are the key configuration properties. Default values are provided where applicable.
 
-#### Retry Execution Count: Default 5 times
-`async.exec.count=5`
+### Core Switch
+| Property | Default | Description |
+|----------|---------|-------------|
+| `async.enabled` | `false` | Global async switch. Set to `true` to enable. |
 
-#### Maximum Number of Retry Queries
-`async.retry.limit=100`
+### Data Source (Druid)
+| Property | Example | Description |
+|----------|---------|-------------|
+| `async.datasource.driver-class-name` | `com.mysql.jdbc.Driver` | JDBC driver. |
+| `async.datasource.url` | `jdbc:mysql://127.0.0.1:3306/fc_async?useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowMultiQueries=true&rewriteBatchedStatements=true` | JDBC URL. |
+| `async.datasource.username` | `user` | Database username. |
+| `async.datasource.password` | `xxxx` | Database password. |
+| `async.datasource.filters` | `config` | Druid filter. |
+| `async.datasource.connectionProperties` | `config.decrypt=true;config.decrypt.key=yyy` | Connection properties. |
 
-#### Maximum Number of Compensation Queries
-`async.comp.limit=100`
+### Static Resources
+| Property | Default |
+|----------|---------|
+| `spring.resources.add-mappings` | `true` |
+| `spring.resources.static-locations` | `classpath:/static/` |
 
-#### Login Switch: Default off
-`async.login.enabled=false`
+### Thread Pool
+| Property | Default | Description |
+|----------|---------|-------------|
+| `async.executor.thread.corePoolSize` | `10` | Core thread count. |
+| `async.executor.thread.maxPoolSize` | `50` | Maximum thread count. |
+| `async.executor.thread.queueCapacity` | `10000` | Queue capacity. |
+| `async.executor.thread.keepAliveSeconds` | `600` | Keep-alive time (seconds). |
 
-#### Login URL
-`async.login.url=http://xxxx.com`
+### Execution & Retry
+| Property | Default | Description |
+|----------|---------|-------------|
+| `async.exec.deleted` | `true` | Delete record after successful execution. |
+| `async.topic` | *Application name* | Custom queue name prefix. |
+| `async.exec.count` | `5` | Maximum retry count. |
+| `async.retry.limit` | `100` | Max records fetched per retry. |
+| `async.comp.limit` | `100` | Max records fetched per compensation task. |
+
+### Login (Optional)
+| Property | Default | Description |
+|----------|---------|-------------|
+| `async.login.enabled` | `false` | Enable login for manual processing page. |
+| `async.login.url` | `http://xxxx.com` | Login URL if enabled. |
+
+---
+
+## 3. Usage
+
+1. **Enable Async**
+
+   ```properties
+   async.enabled=true
+   ```
+
+2. **Add Annotation**
+
+   Apply the annotation to any method that needs asynchronous execution.  
+   > The method must be a **Spring proxied method**.
+
+   ```java
+   @AsyncExec(type = AsyncExecEnum.SAVE_ASYNC, remark = "Data Dictionary")
+   ```
+
+3. **Manual Processing Page**
+
+   Access the web UI for manual compensation/processing:
+
+   ```
+   http://localhost:8004/async/index.html
+   ```
+
+---
+
+## 4. Notes
+
+- Ensure the database schema above is created before enabling async tasks.
+- Druid configuration supports encrypted credentials (`config.decrypt.key`).
+
+---
+
+
