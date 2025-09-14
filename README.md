@@ -1,4 +1,4 @@
-# AsyncSDK
+# async-executor
 
 This module provides an asynchronous task execution framework based on **Spring Boot**, **kafka**, **xxl-job**, and **MySQL**, with flexible configuration and logging.
 
