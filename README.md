@@ -2,7 +2,30 @@
 
 This module provides an asynchronous task execution framework based on **Spring Boot**, **kafka**, **xxl-job**, and **MySQL**, with flexible configuration and logging.
 
-<img width="524" height="1036" alt="ChatGPT Image 2025年9月14日 01_51_39" src="https://github.com/user-attachments/assets/2cf07dca-bf2c-49f6-b396-845ee8e98c76" />
+
+| Field Name      | Description                                                                         | Fallback Plan                                                          |
+| --------------- | ----------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **SAVE\_ASYNC** | Save to the database first, then process via an asynchronous message.               | If saving to DB fails → put into the message queue → execute directly. |
+| **SYNC\_SAVE**  | Process **synchronously** first; if it fails, then save to the database.            | If saving to DB fails → put into the message queue.                    |
+| **ASYNC\_SAVE** | Process via **asynchronous message** first; if it fails, then save to the database. | If saving to DB fails → execute directly.                              |
+| **ASYNC**       | Asynchronous **message** processing only.                                           | If sending the message fails → execute directly.                       |
+| **THREAD**      | Asynchronous **thread** processing only.                                            | —                                                                      |
+
+
+
+
+
+## Safety Level
+
+
+| Safety Level (high → low) | Mode (EN)        | Enum         | Primary Flow                                                                        | Fallback Plan                                                                                   |
+| ------------------------: | ---------------- | ------------ | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+|                         5 | **Save → Async** | `SAVE_ASYNC` | Save to database first, then process via an asynchronous message.                   | If saving to DB fails → put into the message queue; if enqueuing also fails → execute directly. |
+|                         4 | **Sync → Save**  | `SYNC_SAVE`  | Process **synchronously** first; if it fails, then save to the database.            | If saving to DB fails → put into the message queue.                                             |
+|                         3 | **Async → Save** | `ASYNC_SAVE` | Process via **asynchronous message** first; if it fails, then save to the database. | If saving to DB fails → execute directly.                                                       |
+|                         2 | **Async only**   | `ASYNC`      | Asynchronous **message** processing only.                                           | If sending the message fails → execute directly.                                                |
+|                         1 | **Thread only**  | `THREAD`     | Asynchronous **thread** processing only.                                            | None.                                                                                           |
+
 
 
 ## 1. Database Schema
